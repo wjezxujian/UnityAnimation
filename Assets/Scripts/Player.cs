@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Playables;
 
 public class Player : MonoBehaviour 
 {
@@ -20,10 +21,20 @@ public class Player : MonoBehaviour
     private int vaultId = Animator.StringToHash("Vault");
     private int sliderId = Animator.StringToHash("Slider");
 
+    private int isHoldLogId = Animator.StringToHash("IsHoldLog");
 
     private Vector3 matchTarget = Vector3.zero;
 
     private CharacterController characterController;
+
+    public GameObject unityLog = null;
+    public Transform rightHand;
+    public Transform leftHand;
+
+    private bool isHoldLog = false;
+
+    public PlayableDirector playableDirector;
+
 
 
     // Use this for initialization
@@ -32,6 +43,7 @@ public class Player : MonoBehaviour
 
         characterController = GetComponent<CharacterController>();
 
+        //unityLog = transform.Find("Unity_Log").gameObject;
     }
 	
 	// Update is called once per frame
@@ -111,7 +123,8 @@ public class Player : MonoBehaviour
 
                         // 取得目标位置
                         matchTarget = hit.point;
-                        matchTarget.y = hit.collider.transform.position.y + hit.collider.bounds.size.y + 0.07f;
+                        matchTarget = matchTarget + transform.forward * 1.8f;
+                        matchTarget.y = 0;
                     }
 
                 }
@@ -120,9 +133,45 @@ public class Player : MonoBehaviour
 
         anim.SetBool(sliderId, isSlider);
 
-        //if (anim.GetCurrentAnimatorStateInfo(0).IsName("Slide") && anim.IsInTransition(0) == false)
-        //{
-        //    anim.MatchTarget(matchTarget, Quaternion.identity, AvatarTarget.LeftHand, new MatchTargetWeightMask(Vector3.one, 0), 0.38f, 0.50f);
-        //}
+        if (anim.GetCurrentAnimatorStateInfo(0).IsName("Slide") && anim.IsInTransition(0) == false)
+        {
+            anim.MatchTarget(matchTarget, Quaternion.identity, AvatarTarget.Root, new MatchTargetWeightMask(new Vector3(1, 0, 1), 0), 0.17f, 0.67f);
+        }
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.tag == "Log")
+        {
+            Destroy(other.gameObject);
+            CarryWood();
+        }
+
+        if(other.tag == "Playable")
+        {
+            playableDirector.Play();
+        }
+    }
+
+    void CarryWood()
+    {
+        unityLog.SetActive(true);
+        isHoldLog = true;
+        anim.SetBool(isHoldLogId, isHoldLog);
+    }
+
+    private void OnAnimatorIK(int layerIndex)
+    {
+        if(layerIndex == 1 && isHoldLog)
+        {
+            // 说明当前是被Hold Log这一层调用的
+            anim.SetIKPosition(AvatarIKGoal.LeftHand, leftHand.position);
+            anim.SetIKPositionWeight(AvatarIKGoal.LeftHand, 1);
+
+            anim.SetIKPosition(AvatarIKGoal.RightHand, rightHand.position);
+            anim.SetIKPositionWeight(AvatarIKGoal.RightHand, 1);
+        }
     }
 }
+
+
